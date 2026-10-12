@@ -1,0 +1,60 @@
+# Default values for ollama-helm.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+# -- Number of replicas
+replicaCount: 1
+
+# -- Additional environments variables on the output Deployment definition.
+# For extra OLLAMA env, please refer to https://github.com/ollama/ollama/blob/main/envconfig/config.go
+extraEnv: #[]
+  #- name: OLLAMA_DEBUG
+  #  value: "1"
+  - name: OLLAMA_DEBUG
+    value: "0"
+  - name: OLLAMA_ORIGINS
+    value: "*.${CLUSTER_DOMAIN}"
+    #value: "*"
+  - name: OLLAMA_CONTEXT_LENGTH
+    value: "2048" # Cuts KV cache from 1.4 GiB → ~0.7 GiB
+  - name: OLLAMA_KV_CACHE_TYPE
+    # Cuts KV cache 1.4 GiB → ~0.7 GiB, minimal quality loss
+    # Use q4_0 for ~0.35 GiB if you want more headroom
+    value: "q8_0"
+  - name: OLLAMA_NUM_PARALLEL
+    value: "1" # limit concurrent requests
+  - name: OLLAMA_MAX_LOADED_MODELS
+    value: "1" # prevent loading multiple models
+  - name: OLLAMA_KEEP_ALIVE
+    value: "5m" # unload model after 5 min idle → reclaim 2GB
+  - name: OLLAMA_FLASH_ATTENTION
+    value: "1"
+
+# Enable persistence using Persistent Volume Claims
+# ref: https://kubernetes.io/docs/concepts/storage/persistent-volumes/
+persistentVolume:
+  # -- Enable persistence using PVC
+  enabled: true
+  # -- If you'd like to bring your own PVC for persisting Ollama state, pass the name of the
+  # created + ready PVC here. If set, this Chart will not create the default PVC.
+  # Requires server.persistentVolume.enabled: true
+  existingClaim: ""
+
+# Configure resource requests and limits
+# ref: http://kubernetes.io/docs/user-guide/compute-resources/
+resources:
+  # -- Pod requests
+  requests:
+    # Memory request
+    #memory: 2048Mi
+    memory: "3Gi" # Increased from 2048
+    # CPU request
+    cpu: 500m
+
+  # -- Pod limit
+  limits:
+    # Memory limit
+    #memory: 4096Mi
+    memory: "4608Mi" # 4.5 GiB — fits model + KV4096 + ~350Mi headroom
+    # CPU limit
+    cpu: 4 # Allow it to use more CPU cores for pre-processing
